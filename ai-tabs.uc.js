@@ -1,7 +1,7 @@
 // ==UserScript==
 // @ignorecache
-// @name          onions_lfg
-// @description    Sorts tabs using either Firefox Local AI or Google Gemini
+// @name          Zen AI Tabs
+// @description   Sorts tabs using either Firefox Local AI or Google Gemini
 // ==/UserScript==
 
 (() => {
@@ -27,7 +27,7 @@
   const CONFIG = {
     SIMILARITY_THRESHOLD: 0.45,
     GROUP_SIMILARITY_THRESHOLD: 0.65,
-    MIN_TABS_FOR_SORT: 2, // Lowered to allow sorting fewer tabs if desired
+    MIN_TABS_FOR_SORT: 1, 
     DEBOUNCE_DELAY: 250,
     ANIMATION_DURATION: 800,
     MAX_INIT_CHECKS: 50,
@@ -39,10 +39,8 @@
 
   // --- Globals & State ---
   let isSorting = false;
-  let sortButtonListenerAdded = false;
   let isPlayingFailureAnimation = false;
   let sortAnimationId = null;
-  let eventListenersAdded = false;
 
   // DOM Cache
   const domCache = {
@@ -140,8 +138,7 @@
       return "Error Processing Tab";
     }
   };
-  
-  // Helper to extract full URL for Gemini
+
   const getTabData = (tab) => {
       if (!tab || !tab.isConnected) return { title: "Invalid", url: "" };
       let title = getTabTitle(tab);
@@ -182,18 +179,6 @@
       }
     }
     return matrix[b.length][a.length];
-  };
-
-  const findGroupElement = (topicName, workspaceId) => {
-    if (!topicName || !workspaceId) return null;
-    const sanitized = topicName.trim().replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-    try {
-      return document.querySelector(
-        `tab-group[label="${sanitized}"][zen-workspace-id="${workspaceId}"]`
-      );
-    } catch (e) {
-      return null;
-    }
   };
 
   // --- LOCAL AI HELPERS (Embeddings) ---
@@ -276,9 +261,7 @@
   };
 
   // --- MAIN AI CONTROLLER ---
-
   const askAIForMultipleTopics = async (tabs) => {
-    // 1. Check Preferences
     const provider = getPref(PREFS.PROVIDER, "int", 0); // 0 = Local, 1 = Gemini
     
     // --- PATH A: GEMINI (Cloud) ---
@@ -289,7 +272,6 @@
 
         if (!apiKey) {
             console.error("Gemini API Key missing. Please set it in Zen Tidy Tabs preferences.");
-            // Fallback to local? Or just fail? Let's fail gracefully so user knows.
             return tabs.map(t => ({ tab: t, topic: "Missing API Key" }));
         }
 
@@ -299,7 +281,6 @@
             return `${i + 1}. Title: "${data.title}", URL: "${data.url}"`;
         }).join('\n');
 
-        // Get existing groups for context
         const currentWorkspaceId = window.gZenWorkspaces?.activeWorkspace;
         let existingGroupsList = "None";
         if (currentWorkspaceId) {
@@ -319,8 +300,7 @@
         Rules:
         1. If a tab fits an Existing Category, use that EXACT name.
         2. Otherwise, create a new concise category.
-        3. Prioritize specific subtopics over generic ones (e.g., "Python Docs" > "Programming").
-        4. Output ONLY the list of categories, one per line, matching the input order. No numbering.
+        3. Output ONLY the list of categories, one per line, matching the input order. No numbering.
 
         Tabs:
         ${tabDataList}
@@ -344,7 +324,6 @@
 
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
             
-            // Map lines back to tabs
             return validTabs.map((tab, i) => {
                 let topic = lines[i] ? toTitleCase(lines[i].replace(/[^\w\s]/g, '')) : "Uncategorized";
                 return { tab, topic };
@@ -352,9 +331,6 @@
 
         } catch (e) {
             console.error("[TabSort] Gemini Error:", e);
-            // Fallback to local on error?
-            console.log("[TabSort] Falling back to Local AI due to Gemini error...");
-            // Let execution continue to Path B below by not returning
         }
     }
 
@@ -368,7 +344,6 @@
     const result = [];
     const ungroupedTabs = [];
     
-    // 1. Context: Existing Groups
     const existingWorkspaceGroups = new Map();
     const existingGroupEmbeddings = new Map();
 
@@ -386,11 +361,9 @@
       });
     }
 
-    // 2. Generate Embeddings for current tabs
     const tabTitles = validTabs.map(t => getTabTitle(t));
     const embeddings = await processTabsInBatches(validTabs);
 
-    // 3. Generate Embeddings for existing groups (for comparison)
     for (const [groupName, groupInfo] of existingWorkspaceGroups) {
       try {
         const groupTabEmbeddings = await processTabsInBatches(groupInfo.tabs);
@@ -401,7 +374,6 @@
       } catch (e) {}
     }
 
-    // 4. Match tabs to existing groups first
     for (let i = 0; i < validTabs.length; i++) {
       const tab = validTabs[i];
       const tabEmbedding = embeddings[i];
@@ -424,7 +396,6 @@
         }
       }
       
-      // Fallback: Title string matching
       if (!bestMatch) {
           for (const [groupName, groupInfo] of existingWorkspaceGroups) {
               const maxSim = Math.max(...groupInfo.tabTitles.map(t => {
@@ -444,7 +415,6 @@
       }
     }
 
-    // 5. Cluster remaining ungrouped tabs
     if (ungroupedTabs.length > 1) {
       const ungroupedEmbeddings = await processTabsInBatches(ungroupedTabs);
       const validIndices = ungroupedEmbeddings.map((e, i) => Array.isArray(e) && e.length > 0 ? i : -1).filter(i => i !== -1);
@@ -453,10 +423,8 @@
       if (validEmbeddings.length > 1) {
         const clusters = clusterEmbeddings(validEmbeddings, CONFIG.SIMILARITY_THRESHOLD);
         
-        // Helper to name groups
         async function nameGroup(titles) {
             try {
-                // Use Keywords + Text2Text model
                 const allWords = titles.join(" ").toLowerCase().replace(/[^\w\s]/g, " ").split(/\s+/).filter(w => w.length > 2);
                 const wordCount = {};
                 allWords.forEach(w => wordCount[w] = (wordCount[w] || 0) + 1);
@@ -479,12 +447,10 @@
         }
 
         for (const cluster of clusters) {
-            if (cluster.length < 2) continue; // Single items stay ungrouped in local mode
-            
+            if (cluster.length < 2) continue;
             const groupTabs = cluster.map(idx => ungroupedTabs[validIndices[idx]]);
             const groupTitles = groupTabs.map(t => getTabTitle(t));
             const groupName = await nameGroup(groupTitles);
-            
             groupTabs.forEach(tab => result.push({ tab, topic: groupName }));
         }
       }
@@ -493,13 +459,7 @@
     return result;
   };
 
-  // --- Animation & UI Logic (UNCHANGED from Zen Tidy Tabs) ---
-  const batchDOMUpdates = (operations) => {
-    if (!Array.isArray(operations)) return;
-    const fragment = document.createDocumentFragment();
-    try { operations.forEach((op) => op && op(fragment)); } catch (e) {}
-  };
-
+  // --- Animation & UI Logic ---
   const startFailureAnimation = () => {
     if (sortAnimationId !== null) cancelAnimationFrame(sortAnimationId);
     isPlayingFailureAnimation = true;
@@ -562,7 +522,6 @@
     }
   };
 
-  // --- Main Sorting Execution ---
   const sortTabsByTopic = async () => {
     if (isSorting) return;
     isSorting = true;
@@ -578,10 +537,8 @@
       const initialTabsToSort = getFilteredTabs(currentWorkspaceId);
       if (initialTabsToSort.length === 0) return;
 
-      // CALL AI (Local or Gemini)
       const aiTabTopics = await askAIForMultipleTopics(initialTabsToSort);
 
-      // Grouping Logic
       const finalGroups = {};
       aiTabTopics.forEach(({ tab, topic }) => {
         if (!topic || topic === "Uncategorized" || !tab?.isConnected) return;
@@ -589,18 +546,13 @@
         finalGroups[topic].push(tab);
       });
 
-      // Consolidation (Merge similar names)
       const keys = Object.keys(finalGroups);
       const merged = new Set();
-      const map = {};
-      
-      // Simple merge logic for similar group names
       for(let i=0; i<keys.length; i++) {
           if(merged.has(keys[i])) continue;
           for(let j=i+1; j<keys.length; j++) {
               if(merged.has(keys[j])) continue;
               if (levenshteinDistance(keys[i], keys[j]) <= CONFIG.CONSOLIDATION_DISTANCE_THRESHOLD) {
-                  // Merge j into i
                   finalGroups[keys[i]].push(...finalGroups[keys[j]]);
                   delete finalGroups[keys[j]];
                   merged.add(keys[j]);
@@ -610,13 +562,11 @@
 
       const multiTabGroups = Object.values(finalGroups).filter(t => t.length > 0);
       
-      // Failure Check
       if (multiTabGroups.length === 0 && initialTabsToSort.length > 1) {
           startFailureAnimation();
           return;
       }
 
-      // Execution: Move Tabs
       const existingGroupElementsMap = new Map();
       document.querySelectorAll(`tab-group:has(tab[zen-workspace-id="${currentWorkspaceId}"])`).forEach(g => {
           existingGroupElementsMap.set(g.getAttribute("label"), g);
@@ -632,20 +582,15 @@
               if (groupEl.getAttribute("collapsed") === "true") groupEl.setAttribute("collapsed", "false");
               tabs.forEach(t => gBrowser.moveTabToExistingGroup(t, groupEl));
           } else {
-              // Create new group
               try {
                   const newGroup = gBrowser.addTabGroup(tabs, { label: topic, insertBefore: tabs[0] });
                   if (newGroup) {
                       existingGroupElementsMap.set(topic, newGroup);
-                      // Try color auto-assign if available
                       if (newGroup._useFaviconColor) setTimeout(() => newGroup._useFaviconColor(), 500);
                   }
               } catch(e) { console.error(e); }
           }
       }
-      
-      // Reorder Groups vs Ungrouped
-      // (Simplified: just ensuring grouping happened is usually enough for Zen, but we can try to push ungrouped down)
       
     } catch (e) {
       console.error("[TabSort] Critical Error:", e);
@@ -666,12 +611,9 @@
     }
   };
 
-  // --- Button & Init Logic ---
-  // (Standard Zen Tidy Tabs initialization)
   function ensureSortButtonExists(separator) {
       if(!separator || separator.querySelector("#sort-button")) return;
       
-      // SVG Line
       if (!separator.querySelector("svg.separator-line-svg")) {
           const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
           svg.setAttribute("class", "separator-line-svg");
@@ -680,15 +622,17 @@
           separator.insertBefore(svg, separator.firstChild);
       }
 
-      // Sort Button
       const nativeClear = separator.querySelector(".zen-workspace-close-unpinned-tabs-button");
+      
+      // Updated Button: With Label and Larger Icon
       const btn = window.MozXULElement.parseXULToFragment(`
         <toolbarbutton id="sort-button" class="sort-button-with-icon" command="cmd_zenSortTabs" tooltiptext="Sort Tabs (AI)">
             <hbox class="toolbarbutton-box" align="center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 28 28" class="broom-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" class="broom-icon">
                    <g><path d="M19.9132 21.3765C19.8875 21.0162 19.6455 20.7069 19.3007 20.5993L7.21755 16.8291C6.87269 16.7215 6.49768 16.8384 6.27165 17.1202C5.73893 17.7845 4.72031 19.025 3.78544 19.9965C2.4425 21.392 3.01177 22.4772 4.66526 22.9931C4.82548 23.0431 5.78822 21.7398 6.20045 21.7398C6.51906 21.8392 6.8758 23.6828 7.26122 23.8031C7.87402 23.9943 8.55929 24.2081 9.27891 24.4326C9.59033 24.5298 10.2101 23.0557 10.5313 23.1559C10.7774 23.2327 10.7236 24.8834 10.9723 24.961C11.8322 25.2293 12.699 25.4997 13.5152 25.7544C13.868 25.8645 14.8344 24.3299 15.1637 24.4326C15.496 24.5363 15.191 26.2773 15.4898 26.3705C16.7587 26.7664 17.6824 27.0546 17.895 27.1209C19.5487 27.6369 20.6333 27.068 20.3226 25.1563C20.1063 23.8255 19.9737 22.2258 19.9132 21.3765Z" stroke="none"/>
                    <path d="M16.719 1.7134C17.4929-0.767192 20.7999 0.264626 20.026 2.74523C19.2521 5.22583 18.1514 8.75696 17.9629 9.36C17.7045 10.1867 16.1569 15.1482 15.899 15.9749L19.2063 17.0068C20.8597 17.5227 20.205 19.974 18.4514 19.4268L8.52918 16.331C6.87208 15.8139 7.62682 13.3938 9.28426 13.911L12.5916 14.9429C12.8495 14.1163 14.3976 9.15491 14.6555 8.32807C14.9135 7.50122 15.9451 4.19399 16.719 1.7134Z" stroke="none"/></g>
                 </svg>
+                <label value="Sort" class="toolbarbutton-text" style="margin-left: 4px;"/>
             </hbox>
         </toolbarbutton>`).firstChild.cloneNode(true);
       
@@ -702,19 +646,14 @@
   }
 
   const updateButtonsVisibilityState = () => {
-    // Basic check to hide button if no tabs
-    const currentWorkspaceId = window.gZenWorkspaces?.activeWorkspace;
-    const tabs = getFilteredTabs(currentWorkspaceId, { includeGrouped: false });
+    // UPDATED: Button is ALWAYS allowed to be visible (class removed)
+    // It will still be invisible via CSS until you Hover over the separator
     domCache.getSeparators().forEach(sep => {
         const btn = sep.querySelector("#sort-button");
-        if(btn) {
-            if (tabs.length >= CONFIG.MIN_TABS_FOR_SORT) btn.classList.remove("hidden-button");
-            else btn.classList.add("hidden-button");
-        }
+        if(btn) btn.classList.remove("hidden-button"); 
     });
   };
 
-  // --- Debounce & Event Listeners ---
   function debounce(func, wait) {
     let timeout;
     return (...args) => {
@@ -724,7 +663,6 @@
   }
 
   function initializeScript() {
-      // 1. Setup Command
       const cmdSet = domCache.getCommandSet();
       if(cmdSet && !cmdSet.querySelector("#cmd_zenSortTabs")) {
           const cmd = window.MozXULElement.parseXULToFragment('<command id="cmd_zenSortTabs"/>').firstChild;
@@ -732,7 +670,6 @@
           
           cmdSet.addEventListener("command", (e) => {
               if(e.target.id === "cmd_zenSortTabs") {
-                  // Animation: Brushing
                   const sep = document.querySelector(".pinned-tabs-container-separator");
                   const btn = sep?.querySelector("#sort-button");
                   if(btn) {
@@ -740,7 +677,6 @@
                       setTimeout(() => btn.classList.remove("brushing"), 800);
                   }
                   
-                  // Animation: Wavy Line
                   const path = sep?.querySelector("#separator-path");
                   if(path) {
                       let t = 0;
@@ -766,10 +702,8 @@
           });
       }
       
-      // 2. Buttons
       addSortButtonToAllSeparators();
       
-      // 3. Hooks
       if(window.gZenWorkspaces) {
           const origInsert = window.gZenWorkspaces.onTabBrowserInserted;
           window.gZenWorkspaces.onTabBrowserInserted = function(e) {
@@ -784,7 +718,6 @@
           }
       }
       
-      // 4. Tab Listeners
       const update = debounce(updateButtonsVisibilityState, 250);
       ["TabOpen", "TabClose", "TabSelect", "TabPinned", "TabUnpinned", "TabGrouped", "TabUngrouped"].forEach(ev => {
           gBrowser.tabContainer.addEventListener(ev, update);

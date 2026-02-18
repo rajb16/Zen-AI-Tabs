@@ -37,15 +37,15 @@
     opacity: 0;
     visibility: collapse;
     transition: opacity 0.15s, visibility 0.15s;
-    font-size: 10px !important;
+    font-size: 12px !important; /* Increased from 10px */
     font-weight: 500;
-    gap: 2px;
+    gap: 4px; /* Space between icon and text */
     flex-shrink: 0;
     min-width: 0;
     overflow: hidden;
     pointer-events: none;
     margin: 0 !important;
-    padding: 0 !important;
+    padding: 2px 6px !important; /* Larger touch target */
     white-space: nowrap;
     
     /* Inherit theme colors properly */
@@ -63,8 +63,8 @@
     }
 
     & .broom-icon {
-      width: 10px !important;
-      height: 10px !important;
+      width: 18px !important; /* Increased icon size */
+      height: 18px !important;
       transition: transform 0.15s ease-in-out;
       transform: translateY(0px);
       fill: currentColor !important;
@@ -72,16 +72,6 @@
 
     & .broom-icon path {
       fill: currentColor !important;
-    }
-
-    @starting-style {
-      & .broom-icon {
-        transform: translateY(-2px);
-      }
-    }
-
-    &:active:hover .broom-icon {
-      transform: translateY(2px);
     }
 
     /* Brushing Animation */
@@ -104,27 +94,33 @@
     :root:not([zen-sidebar-expanded="true"]) & {
       display: none;
     }
-
-    /* Helper class to hide button via JS if not needed */
-    &.hidden-button {
-      display: none !important;
-      pointer-events: none !important;
-      opacity: 0 !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
   }
 
-  /* Separator Hover State (Reveals Button) */
+  /* --- Native Clear Button Styling --- */
+  & .zen-workspace-close-unpinned-tabs-button {
+      appearance: none !important;
+      opacity: 0;
+      visibility: collapse;
+      transition: opacity 0.15s, visibility 0.15s;
+      pointer-events: none;
+      
+      /* Make it match sort button size/style */
+      transform: scale(1.2); /* Slightly larger */
+      margin-left: 4px !important;
+  }
+  
+  /* Separator Hover State (Reveals Buttons) */
   &:hover {
-    & #sort-button {
+    & #sort-button,
+    & .zen-workspace-close-unpinned-tabs-button {
       visibility: visible;
-      opacity: 0.5;
+      opacity: 0.6;
       pointer-events: auto;
       cursor: pointer !important;
     }
 
-    & #sort-button:hover {
+    & #sort-button:hover,
+    & .zen-workspace-close-unpinned-tabs-button:hover {
       opacity: 1 !important;
     }
   }
@@ -139,7 +135,8 @@
     gap: 0 !important;
 
     & svg,
-    & #sort-button {
+    & #sort-button,
+    & .zen-workspace-close-unpinned-tabs-button {
       display: none !important;
       width: 0 !important;
       opacity: 0 !important;
@@ -147,19 +144,10 @@
   }
 }
 
-/* Hide separator in specific Zen view modes */
-#vertical-pinned-tabs-container .zen-workspace-tabs-section[hide-separator] .pinned-tabs-container-separator {
-  max-height: 0 !important;
-  margin: 0 auto !important;
-  padding: 0 !important;
-  border: none !important;
-  overflow: hidden !important;
-  gap: 0 !important;
-}
-
-/* Adjust line width when button is visible */
+/* Adjust line width when button is visible - Longer Line Logic */
 .vertical-pinned-tabs-container-separator:hover svg {
-  width: calc(100% - (100px * (1 - var(--sort-button-hidden, 0)))) !important;
+  /* Reduced buffer from 100px to 60px to make line longer/closer */
+  width: calc(100% - 60px) !important; 
 }
 
 /* Tab Loading State (Pulse Animation) */
