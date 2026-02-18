@@ -17,6 +17,8 @@
   "version": "2.0.0",
   "tags": [
     "onions_lfg",
+    "vertext",
+    "Advanced Tab groups",
     "Zen Browser",
     "Tab Groups",
     "Tab Sorting",
@@ -27,6 +29,6 @@
   ],
   "createdAt": "2026-02-18",
   "updatedAt": "2026-02-18 15:30",
-  "modules": ["rajb16/Zen-AI-Tabs"],
+  "modules": ["Vertex-Mods/Advanced-Tab-Groups"],
   "fork": ["zen"]
 }
