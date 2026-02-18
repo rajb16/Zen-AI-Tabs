@@ -3,7 +3,7 @@
   "name": "Zen AI Tabs",
   "description": "Sort your tabs using Firefox's local AI or Google Gemini!",
   "scripts": {
-    "tidy-tabs.uc.js": {
+    "ai-tabs.uc.js": {
       "include": [
         "chrome://browser/content/browser.xhtml"
       ]
