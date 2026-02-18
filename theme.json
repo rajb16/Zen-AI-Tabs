@@ -1,0 +1,37 @@
+{
+  "id": "zen-ai-tabs",
+  "name": "Zen AI Tabs",
+  "description": "Sort your tabs using Firefox's local AI or Google Gemini!",
+  "scripts": {
+    "tidy-tabs.uc.js": {
+      "include": [
+        "chrome://browser/content/browser.xhtml"
+      ]
+    }
+  },
+  "homepage": "https://github.com/rajb16/Zen-AI-Tabs",
+  "style": {
+    "chrome": "userChrome.css"
+  },
+  "preferences": "preferences.json",
+  "readme": "https://raw.githubusercontent.com/rajb16/Zen-AI-Tabs/main/README.md",
+  "image": "https://raw.githubusercontent.com/rajb16/Zen-AI-Tabs/main/image.png",
+  "author": "Rajb16",
+  "version": "2.0.0",
+  "tags": [
+    "onions_lfg",
+    "Zen Browser",
+    "Tab Groups",
+    "Tab Sorting",
+    "AI",
+    "Gemini",
+    "Local",
+    "Hybrid"
+  ],
+  "createdAt": "2026-02-18",
+  "updatedAt": "2026-02-18 15:30",
+  "modules": [
+    "rajb16/Zen-AI-Tabs"
+  ],
+  "fork": ["zen"]
+}
