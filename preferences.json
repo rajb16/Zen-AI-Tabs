@@ -38,5 +38,40 @@
     "conditions": [
       { "if": { "property": "extensions.zen-ai-tabs.ai_provider", "value": 1 } }
     ]
+  },
+  {
+    "type": "separator",
+    "label": "UI Customization",
+    "id": "ui-settings-separator"
+  },
+  {
+    "property": "extensions.zen-ai-tabs.show_labels",
+    "label": "Show Button Text Labels (Sort/Clear)",
+    "type": "checkbox",
+    "default": true
+  },
+  {
+    "property": "extensions.zen-ai-tabs.ui_scale",
+    "label": "Button Size",
+    "type": "dropdown",
+    "value": "number",
+    "default": 2,
+    "options": [
+      { "value": 0, "label": "Compact (14px)" },
+      { "value": 1, "label": "Normal (16px)" },
+      { "value": 2, "label": "Large (18px)" }
+    ]
+  },
+  {
+    "property": "extensions.zen-ai-tabs.line_gap",
+    "label": "Separator Line Length (Gap Size)",
+    "type": "dropdown",
+    "value": "number",
+    "default": 40,
+    "options": [
+      { "value": 40, "label": "Long Line (Small Gap)" },
+      { "value": 80, "label": "Standard Line (Medium Gap)" },
+      { "value": 120, "label": "Short Line (Large Gap)" }
+    ]
   }
 ]

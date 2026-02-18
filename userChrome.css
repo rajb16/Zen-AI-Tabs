@@ -37,15 +37,15 @@
     opacity: 0;
     visibility: collapse;
     transition: opacity 0.15s, visibility 0.15s;
-    font-size: 12px !important; /* Increased from 10px */
+    font-size: var(--zen-ai-font-size, 12px) !important;
     font-weight: 500;
-    gap: 4px; /* Space between icon and text */
+    gap: 4px;
     flex-shrink: 0;
     min-width: 0;
     overflow: hidden;
     pointer-events: none;
     margin: 0 !important;
-    padding: 2px 6px !important; /* Larger touch target */
+    padding: 2px 6px !important;
     white-space: nowrap;
     
     /* Inherit theme colors properly */
@@ -54,7 +54,7 @@
     color: inherit;
 
     & label {
-      display: block;
+      display: var(--zen-ai-label-display, flex); /* Controlled by Prefs */
       font-weight: 600;
     }
 
@@ -63,8 +63,8 @@
     }
 
     & .broom-icon {
-      width: 18px !important; /* Increased icon size */
-      height: 18px !important;
+      width: var(--zen-ai-icon-size, 18px) !important;
+      height: var(--zen-ai-icon-size, 18px) !important;
       transition: transform 0.15s ease-in-out;
       transform: translateY(0px);
       fill: currentColor !important;
@@ -94,6 +94,11 @@
     :root:not([zen-sidebar-expanded="true"]) & {
       display: none;
     }
+
+    /* Helper class to hide button via JS if not needed */
+    &.hidden-button {
+      display: none !important;
+    }
   }
 
   /* --- Native Clear Button Styling --- */
@@ -103,10 +108,20 @@
       visibility: collapse;
       transition: opacity 0.15s, visibility 0.15s;
       pointer-events: none;
+      display: flex;
+      align-items: center;
       
-      /* Make it match sort button size/style */
-      transform: scale(1.2); /* Slightly larger */
+      /* Scale using same vars */
       margin-left: 4px !important;
+  }
+
+  /* Inject "Clear" label if Show Labels is ON */
+  & .zen-workspace-close-unpinned-tabs-button::after {
+      content: "Clear";
+      display: var(--zen-ai-label-display, none);
+      font-size: var(--zen-ai-font-size, 12px);
+      margin-left: 4px;
+      font-weight: 600;
   }
   
   /* Separator Hover State (Reveals Buttons) */
@@ -144,10 +159,10 @@
   }
 }
 
-/* Adjust line width when button is visible - Longer Line Logic */
+/* Adjust line width (Gap Size) */
 .vertical-pinned-tabs-container-separator:hover svg {
-  /* Reduced buffer from 100px to 60px to make line longer/closer */
-  width: calc(100% - 60px) !important; 
+  /* Smaller number = Longer line */
+  width: calc(100% - var(--zen-ai-separator-gap, 40px)) !important;
 }
 
 /* Tab Loading State (Pulse Animation) */
@@ -161,7 +176,6 @@
 
 /* Separator Line Styling */
 .separator-path-segment {
-  /* Adapt to light/dark themes */
   stroke: light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2)) !important;
 }
 

@@ -7,9 +7,13 @@
 (() => {
   // --- PREFERENCES ---
   const PREFS = {
-    PROVIDER: "extensions.zen-ai-tabs.ai_provider", // 0 = Local, 1 = Gemini
+    PROVIDER: "extensions.zen-ai-tabs.ai_provider",
     GEMINI_KEY: "extensions.zen-ai-tabs.gemini_api_key",
     GEMINI_MODEL: "extensions.zen-ai-tabs.gemini_model",
+    // UI Prefs
+    SHOW_LABELS: "extensions.zen-ai-tabs.show_labels",
+    UI_SCALE: "extensions.zen-ai-tabs.ui_scale",
+    LINE_GAP: "extensions.zen-ai-tabs.line_gap"
   };
 
   const getPref = (prefName, type, fallback) => {
@@ -22,6 +26,29 @@
       }
     } catch (e) {}
     return fallback;
+  };
+
+  // Apply UI Preferences as CSS Variables
+  const applyUserStyles = () => {
+      const showLabels = getPref(PREFS.SHOW_LABELS, "bool", true);
+      const scale = getPref(PREFS.UI_SCALE, "int", 2); // Default Large
+      const gap = getPref(PREFS.LINE_GAP, "int", 40);  // Default Small Gap (Long Line)
+
+      const root = document.documentElement;
+      
+      // 1. Label Display
+      root.style.setProperty('--zen-ai-label-display', showLabels ? 'flex' : 'none');
+      
+      // 2. Line Gap (Controls length)
+      root.style.setProperty('--zen-ai-separator-gap', `${gap}px`);
+
+      // 3. Icon & Font Sizes
+      let iconSize = 16, fontSize = 11;
+      if (scale === 0) { iconSize = 14; fontSize = 10; } // Compact
+      if (scale === 2) { iconSize = 18; fontSize = 12; } // Large
+
+      root.style.setProperty('--zen-ai-icon-size', `${iconSize}px`);
+      root.style.setProperty('--zen-ai-font-size', `${fontSize}px`);
   };
 
   const CONFIG = {
@@ -624,7 +651,6 @@
 
       const nativeClear = separator.querySelector(".zen-workspace-close-unpinned-tabs-button");
       
-      // Updated Button: With Label and Larger Icon
       const btn = window.MozXULElement.parseXULToFragment(`
         <toolbarbutton id="sort-button" class="sort-button-with-icon" command="cmd_zenSortTabs" tooltiptext="Sort Tabs (AI)">
             <hbox class="toolbarbutton-box" align="center">
@@ -646,8 +672,6 @@
   }
 
   const updateButtonsVisibilityState = () => {
-    // UPDATED: Button is ALWAYS allowed to be visible (class removed)
-    // It will still be invisible via CSS until you Hover over the separator
     domCache.getSeparators().forEach(sep => {
         const btn = sep.querySelector("#sort-button");
         if(btn) btn.classList.remove("hidden-button"); 
@@ -663,6 +687,9 @@
   }
 
   function initializeScript() {
+      // Apply UI Theme
+      applyUserStyles();
+
       const cmdSet = domCache.getCommandSet();
       if(cmdSet && !cmdSet.querySelector("#cmd_zenSortTabs")) {
           const cmd = window.MozXULElement.parseXULToFragment('<command id="cmd_zenSortTabs"/>').firstChild;
