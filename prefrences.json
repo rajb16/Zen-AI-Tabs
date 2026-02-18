@@ -1,0 +1,42 @@
+[
+  {
+    "type": "separator",
+    "label": "AI Configuration",
+    "id": "ai-settings-separator"
+  },
+  {
+    "property": "extensions.zen-ai-tabs.ai_provider",
+    "label": "AI Provider",
+    "type": "dropdown",
+    "value": "number",
+    "default": 0,
+    "options": [
+      {
+        "value": 0,
+        "label": "Firefox Local AI (Default)"
+      },
+      {
+        "value": 1,
+        "label": "Google Gemini"
+      }
+    ]
+  },
+  {
+    "property": "extensions.zen-ai-tabs.gemini_api_key",
+    "label": "Gemini API Key",
+    "type": "string",
+    "placeholder": "Paste your API Key here",
+    "conditions": [
+      { "if": { "property": "extensions.zen-ai-tabs.ai_provider", "value": 1 } }
+    ]
+  },
+  {
+    "property": "extensions.zen-ai-tabs.gemini_model",
+    "label": "Gemini Model",
+    "type": "string",
+    "default": "gemini-2.0-flash",
+    "conditions": [
+      { "if": { "property": "extensions.zen-ai-tabs.ai_provider", "value": 1 } }
+    ]
+  }
+]
