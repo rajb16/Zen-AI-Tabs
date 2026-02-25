@@ -2,6 +2,8 @@
 Hi all, 
 I'd like to introduce "Zen AI Tabs". It's a combination of the outdated Gemini AI implementation by Darsh-A/Ai-TabGroups-ZenBrowser and a Firefox AI only implementation by Vertex-Mods Zen-Tidy-Tabs. 
 In this mod you can select between Firefox AI or Google's Gemini AI.
+
+
 <img width="322" height="551" alt="image" src="https://github.com/user-attachments/assets/1585f949-bd73-474f-a10b-7a32468d3623" />
 
 
@@ -17,6 +19,7 @@ Install:
     <img width="475" height="114" alt="image" src="https://github.com/user-attachments/assets/0dac4043-c71d-4e57-bdec-11bfbb5df4d4" />
 
 *   Look for Zen AI Tabs in the sine mods list and click settings
+
       <img width="816" height="172" alt="image" src="https://github.com/user-attachments/assets/36200bab-86cd-4dd2-a8d8-b40307bc5fc7" />
 
 *   By default, the mod uses the Firefox AI for sorting if you would like to use Gemini please select Gemini in the dropdown menu.
