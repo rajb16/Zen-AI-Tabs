@@ -14,6 +14,7 @@ In this mod you can select between Firefox AI or Google's Gemini AI.
 
 Install:
 *   Make sure you have sine and Advanced Tab Groups installed.
+*   Go to the sine mods page in settings.
 *   Under add your own repo type "rajb16/Zen-AI-Tabs" and hit install.
 
     <img width="475" height="114" alt="image" src="https://github.com/user-attachments/assets/0dac4043-c71d-4e57-bdec-11bfbb5df4d4" />
