@@ -29,5 +29,6 @@
   ],
   "createdAt": "2026-02-18",
   "updatedAt": "2026-02-18 15:30",
+  "modules": ["rajb16/Zen-Tab-Groups"],
   "fork": ["zen"]
 }

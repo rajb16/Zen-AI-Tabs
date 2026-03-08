@@ -126,8 +126,7 @@
       const isInCorrectWorkspace =
         tab.getAttribute("zen-workspace-id") === workspaceId;
       if (!isInCorrectWorkspace) return false;
-      const groupParent = tab.closest("tab-group");
-      const isInGroup = !!groupParent;
+      const isInGroup = tab.hasAttribute("zen-group");
 
       return (
         (includePinned || !tab.pinned) &&
@@ -343,10 +342,10 @@
         const groups = [];
         document
           .querySelectorAll(
-            `tab-group:has(tab[zen-workspace-id="${currentWorkspaceId}"])`,
+            `.zen-custom-group-header[zen-workspace-id="${currentWorkspaceId}"]`,
           )
           .forEach((g) => {
-            const l = g.getAttribute("label");
+            const l = g.getAttribute("group-name");
             if (l) groups.push(l);
           });
         if (groups.length) existingGroupsList = groups.join(", ");
@@ -417,20 +416,19 @@
     if (currentWorkspaceId) {
       document
         .querySelectorAll(
-          `tab-group:has(tab[zen-workspace-id="${currentWorkspaceId}"])`,
+          `.zen-custom-group-header[zen-workspace-id="${currentWorkspaceId}"]`,
         )
-        .forEach((groupEl) => {
-          const label = groupEl.getAttribute("label");
+        .forEach((headerEl) => {
+          const label = headerEl.getAttribute("group-name");
           if (label) {
             const groupTabs = Array.from(
-              groupEl.querySelectorAll("tab"),
-            ).filter(
-              (tab) =>
-                tab.getAttribute("zen-workspace-id") === currentWorkspaceId,
+              gBrowser.tabContainer.querySelectorAll(
+                `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${label}"]`,
+              ),
             );
             if (groupTabs.length > 0) {
               existingWorkspaceGroups.set(label, {
-                element: groupEl,
+                element: headerEl,
                 tabs: groupTabs,
                 tabTitles: groupTabs.map((t) => getTabTitle(t)),
               });
@@ -690,41 +688,92 @@
         return;
       }
 
+      // Safety check: Ensure the Tab Groups mod is installed
+      if (!window.ZenCustomGroups) {
+        console.error(
+          "[Zen AI Tabs] Required mod 'Zen Tab Groups' is missing.",
+        );
+        return;
+      }
+
       const existingGroupElementsMap = new Map();
       document
         .querySelectorAll(
-          `tab-group:has(tab[zen-workspace-id="${currentWorkspaceId}"])`,
+          `.zen-custom-group-header[zen-workspace-id="${currentWorkspaceId}"]`,
         )
         .forEach((g) => {
-          existingGroupElementsMap.set(g.getAttribute("label"), g);
+          existingGroupElementsMap.set(g.getAttribute("group-name"), g);
         });
+
+      // Pause the evaluate chain so we don't trigger unnecessary re-sorts while moving
+      window.ZenCustomGroups.isMovingMultiple = true;
 
       for (const topic in finalGroups) {
         const tabs = finalGroups[topic];
         if (!tabs.length) continue;
 
-        let groupEl = existingGroupElementsMap.get(topic);
+        let headerEl = existingGroupElementsMap.get(topic);
+        let targetColor = "grey";
 
-        if (groupEl && groupEl.isConnected) {
-          if (groupEl.getAttribute("collapsed") === "true")
-            groupEl.setAttribute("collapsed", "false");
-          tabs.forEach((t) => gBrowser.moveTabToExistingGroup(t, groupEl));
-        } else {
-          try {
-            const newGroup = gBrowser.addTabGroup(tabs, {
-              label: topic,
-              insertBefore: tabs[0],
-            });
-            if (newGroup) {
-              existingGroupElementsMap.set(topic, newGroup);
-              if (newGroup._useFaviconColor)
-                setTimeout(() => newGroup._useFaviconColor(), 500);
-            }
-          } catch (e) {
-            console.error(e);
+        if (headerEl && headerEl.isConnected) {
+          // --- EXISTING GROUP ---
+          targetColor = headerEl.getAttribute("zen-color") || "grey";
+
+          // Uncollapse if currently collapsed
+          if (headerEl.getAttribute("zen-collapsed") === "true") {
+            headerEl.setAttribute("zen-collapsed", "false");
+            const existingTabs = gBrowser.tabContainer.querySelectorAll(
+              `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${topic}"]`,
+            );
+            existingTabs.forEach((t) => t.removeAttribute("zen-hidden"));
           }
+
+          // Find insertion index (after the last existing tab in this group)
+          const existingTabs = Array.from(
+            gBrowser.tabContainer.querySelectorAll(
+              `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${topic}"]`,
+            ),
+          );
+          let insertIndex = tabs[0]._tPos;
+          if (existingTabs.length > 0) {
+            insertIndex = existingTabs[existingTabs.length - 1]._tPos + 1;
+          }
+
+          tabs.forEach((tab) => {
+            if (tab.getAttribute("zen-group") !== topic) {
+              window.ZenCustomGroups.removeTabFromGroup(tab);
+              gBrowser.moveTabTo(tab, insertIndex);
+              window.ZenCustomGroups.addTabToGroup(tab, topic, targetColor);
+              insertIndex++;
+            }
+          });
+        } else {
+          // --- NEW GROUP ---
+          targetColor = window.ZenCustomGroups.detectTabColor(tabs[0]);
+          let insertIndex = tabs[0]._tPos;
+
+          // Move and assign tabs
+          tabs.forEach((tab) => {
+            window.ZenCustomGroups.removeTabFromGroup(tab);
+            gBrowser.moveTabTo(tab, insertIndex);
+            window.ZenCustomGroups.addTabToGroup(tab, topic, targetColor);
+            insertIndex++;
+          });
+
+          // Create the header right before the first tab
+          window.ZenCustomGroups.createGroupHeader(topic, tabs[0], targetColor);
+          existingGroupElementsMap.set(
+            topic,
+            document.querySelector(
+              `.zen-custom-group-header[group-name="${topic}"]`,
+            ),
+          );
         }
       }
+
+      // Resume evaluate chain and clean up
+      window.ZenCustomGroups.isMovingMultiple = false;
+      window.ZenCustomGroups.cleanupEmptyGroups();
     } catch (e) {
       console.error("[TabSort] Critical Error:", e);
     } finally {
