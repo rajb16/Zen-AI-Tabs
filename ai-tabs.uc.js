@@ -292,7 +292,7 @@
       const norm = Math.sqrt(pooled.reduce((sum, v) => sum + v * v, 0));
       return norm === 0 ? pooled : pooled.map((v) => v / norm);
     } catch (e) {
-      console.error("[TabSort][LocalAI] Embedding error:", e);
+      console.error("[Zen AI Tabs][LocalAI] Embedding error:", e);
       return null;
     }
   };
@@ -318,7 +318,7 @@
 
     // --- PATH A: GEMINI (Cloud) ---
     if (provider === 1) {
-      console.log("[TabSort] Using GEMINI Provider");
+      console.log("[Zen AI Tabs] Using GEMINI Provider");
       const apiKey = getPref(PREFS.GEMINI_KEY, "string", "");
       const model = getPref(
         PREFS.GEMINI_MODEL,
@@ -401,13 +401,13 @@
           return { tab, topic };
         });
       } catch (e) {
-        console.error("[TabSort] Gemini Error:", e);
+        console.error("[Zen AI Tabs] Gemini Error:", e);
         return tabs.map((t) => ({ tab: t, topic: "Uncategorized" }));
       }
     }
 
     // --- PATH B: LOCAL (Firefox Built-in) ---
-    console.log("[TabSort] Using LOCAL Firefox AI");
+    console.log("[Zen AI Tabs] Using LOCAL Firefox AI");
 
     const validTabs = tabs.filter((tab) => tab?.isConnected);
     if (!validTabs.length) return [];
@@ -782,7 +782,7 @@
       window.ZenCustomGroups.isMovingMultiple = false;
       window.ZenCustomGroups.cleanupEmptyGroups();
     } catch (e) {
-      console.error("[TabSort] Critical Error:", e);
+      console.error("[Zen AI Tabs] Critical Error:", e);
     } finally {
       if (isPlayingFailureAnimation) {
         setTimeout(() => {
