@@ -34,7 +34,7 @@
     "property": "extensions.zen-ai-tabs.gemini_model",
     "label": "Gemini Model",
     "type": "string",
-    "default": "gemini-2.0-flash",
+    "default": "gemini-3-flash-preview",
     "conditions": [
       { "if": { "property": "extensions.zen-ai-tabs.ai_provider", "value": 1 } }
     ]

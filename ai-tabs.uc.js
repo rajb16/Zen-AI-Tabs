@@ -31,7 +31,7 @@
   // --- STYLE APPLICATOR ---
   const applyUserStyles = () => {
     const showLabels = getPref(PREFS.SHOW_LABELS, "bool", true);
-    const scale = getPref(PREFS.UI_SCALE, "int", 1); // Default Normal
+    const scale = getPref(PREFS.UI_SCALE, "int", 2); // Default Large (matches preferences.json)
     const gap = getPref(PREFS.LINE_GAP, "int", 40); // Default Small Gap
 
     const root = document.documentElement;
@@ -83,12 +83,10 @@
   const CONFIG = {
     SIMILARITY_THRESHOLD: 0.45,
     GROUP_SIMILARITY_THRESHOLD: 0.65,
-    MIN_TABS_FOR_SORT: 1,
+    MIN_TABS_FOR_SORT: 2,
     DEBOUNCE_DELAY: 250,
-    ANIMATION_DURATION: 800,
-    MAX_INIT_CHECKS: 50,
-    INIT_CHECK_INTERVAL: 100,
     CONSOLIDATION_DISTANCE_THRESHOLD: 2,
+    CONSOLIDATION_MIN_LENGTH: 5,
     EMBEDDING_BATCH_SIZE: 5,
     EXISTING_GROUP_BOOST: 0.1,
   };
@@ -299,7 +297,10 @@
     }
   };
 
-  const processTabsInBatches = async (tabs, batchSize = 5) => {
+  const processTabsInBatches = async (
+    tabs,
+    batchSize = CONFIG.EMBEDDING_BATCH_SIZE,
+  ) => {
     const results = [];
     for (let i = 0; i < tabs.length; i += batchSize) {
       const batch = tabs.slice(i, i + batchSize);
@@ -319,13 +320,17 @@
     if (provider === 1) {
       console.log("[TabSort] Using GEMINI Provider");
       const apiKey = getPref(PREFS.GEMINI_KEY, "string", "");
-      const model = getPref(PREFS.GEMINI_MODEL, "string", "gemini-2.0-flash");
+      const model = getPref(
+        PREFS.GEMINI_MODEL,
+        "string",
+        "gemini-3-flash-preview",
+      );
 
       if (!apiKey) {
         console.error(
-          "Gemini API Key missing. Please set it in Zen Tidy Tabs preferences.",
+          "[Zen AI Tabs] Gemini API Key missing. Please set it in Zen AI Tabs preferences.",
         );
-        return tabs.map((t) => ({ tab: t, topic: "Missing API Key" }));
+        return tabs.map((t) => ({ tab: t, topic: "Uncategorized" }));
       }
 
       const validTabs = tabs.filter((t) => t && t.isConnected);
@@ -397,6 +402,7 @@
         });
       } catch (e) {
         console.error("[TabSort] Gemini Error:", e);
+        return tabs.map((t) => ({ tab: t, topic: "Uncategorized" }));
       }
     }
 
@@ -668,9 +674,11 @@
         if (merged.has(keys[i])) continue;
         for (let j = i + 1; j < keys.length; j++) {
           if (merged.has(keys[j])) continue;
+          const shortestLength = Math.min(keys[i].length, keys[j].length);
           if (
+            shortestLength >= CONFIG.CONSOLIDATION_MIN_LENGTH &&
             levenshteinDistance(keys[i], keys[j]) <=
-            CONFIG.CONSOLIDATION_DISTANCE_THRESHOLD
+              CONFIG.CONSOLIDATION_DISTANCE_THRESHOLD
           ) {
             finalGroups[keys[i]].push(...finalGroups[keys[j]]);
             delete finalGroups[keys[j]];
@@ -761,13 +769,12 @@
           });
 
           // Create the header right before the first tab
-          window.ZenCustomGroups.createGroupHeader(topic, tabs[0], targetColor);
-          existingGroupElementsMap.set(
+          const newHeader = window.ZenCustomGroups.createGroupHeader(
             topic,
-            document.querySelector(
-              `.zen-custom-group-header[group-name="${topic}"]`,
-            ),
+            tabs[0],
+            targetColor,
           );
+          existingGroupElementsMap.set(topic, newHeader);
         }
       }
 
@@ -835,9 +842,15 @@
   }
 
   const updateButtonsVisibilityState = () => {
+    const currentWorkspaceId = window.gZenWorkspaces?.activeWorkspace;
+    const ungroupedCount = currentWorkspaceId
+      ? getFilteredTabs(currentWorkspaceId).length
+      : 0;
+    const shouldShow = ungroupedCount >= CONFIG.MIN_TABS_FOR_SORT;
+
     domCache.getSeparators().forEach((sep) => {
       const btn = sep.querySelector("#sort-button");
-      if (btn) btn.classList.remove("hidden-button");
+      if (btn) btn.classList.toggle("hidden-button", !shouldShow);
     });
   };
 
