@@ -723,21 +723,15 @@
         let headerEl = existingGroupElementsMap.get(topic);
         let targetColor = "grey";
 
-        // Insert a tab right after whichever tab currently sits last in the
-        // group. Recomputed fresh from the live DOM for every single tab -
-        // moveTabTo shifts everyone else's real position, so a precomputed
-        // counter that just increments drifts stale after the first move
-        // (worse the more tabs there are to place).
-        const insertAtGroupEnd = (tab) => {
-          const currentGroupTabs = gBrowser.tabContainer.querySelectorAll(
-            `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${topic}"]`,
+        // Shared with tabGroups.uc.js's manual "Add to tab group" flow so
+        // both always land tabs next to their actual group instead of
+        // wherever a stale precomputed index happens to point.
+        const insertAtGroupEnd = (tab) =>
+          window.ZenCustomGroups.insertTabAtGroupEnd(
+            tab,
+            topic,
+            currentWorkspaceId,
           );
-          const insertIndex =
-            currentGroupTabs.length > 0
-              ? currentGroupTabs[currentGroupTabs.length - 1]._tPos + 1
-              : tab._tPos;
-          gBrowser.moveTabTo(tab, insertIndex);
-        };
 
         if (headerEl && headerEl.isConnected) {
           // --- EXISTING GROUP ---
