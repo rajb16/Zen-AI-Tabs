@@ -8,7 +8,6 @@ In this mod you can select between Firefox AI or Google's Gemini AI.
 
 
 ## Requirements:  
-*  https://github.com/Vertex-Mods/Advanced-Tab-Groups
 *  https://github.com/CosmoCreeper/Sine
 *  An API key from https://aistudio.google.com/api-keys
 
