@@ -723,6 +723,22 @@
         let headerEl = existingGroupElementsMap.get(topic);
         let targetColor = "grey";
 
+        // Insert a tab right after whichever tab currently sits last in the
+        // group. Recomputed fresh from the live DOM for every single tab -
+        // moveTabTo shifts everyone else's real position, so a precomputed
+        // counter that just increments drifts stale after the first move
+        // (worse the more tabs there are to place).
+        const insertAtGroupEnd = (tab) => {
+          const currentGroupTabs = gBrowser.tabContainer.querySelectorAll(
+            `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${topic}"]`,
+          );
+          const insertIndex =
+            currentGroupTabs.length > 0
+              ? currentGroupTabs[currentGroupTabs.length - 1]._tPos + 1
+              : tab._tPos;
+          gBrowser.moveTabTo(tab, insertIndex);
+        };
+
         if (headerEl && headerEl.isConnected) {
           // --- EXISTING GROUP ---
           targetColor = headerEl.getAttribute("zen-color") || "grey";
@@ -736,45 +752,35 @@
             existingTabs.forEach((t) => t.removeAttribute("zen-hidden"));
           }
 
-          // Find insertion index (after the last existing tab in this group)
-          const existingTabs = Array.from(
-            gBrowser.tabContainer.querySelectorAll(
-              `tab[zen-workspace-id="${currentWorkspaceId}"][zen-group="${topic}"]`,
-            ),
-          );
-          let insertIndex = tabs[0]._tPos;
-          if (existingTabs.length > 0) {
-            insertIndex = existingTabs[existingTabs.length - 1]._tPos + 1;
-          }
-
           tabs.forEach((tab) => {
             if (tab.getAttribute("zen-group") !== topic) {
               window.ZenCustomGroups.removeTabFromGroup(tab);
-              gBrowser.moveTabTo(tab, insertIndex);
+              insertAtGroupEnd(tab);
               window.ZenCustomGroups.addTabToGroup(tab, topic, targetColor);
-              insertIndex++;
             }
           });
         } else {
           // --- NEW GROUP ---
           targetColor = window.ZenCustomGroups.detectTabColor(tabs[0]);
-          let insertIndex = tabs[0]._tPos;
 
-          // Move and assign tabs
-          tabs.forEach((tab) => {
-            window.ZenCustomGroups.removeTabFromGroup(tab);
-            gBrowser.moveTabTo(tab, insertIndex);
-            window.ZenCustomGroups.addTabToGroup(tab, topic, targetColor);
-            insertIndex++;
-          });
+          // Place the first tab, create the header right before it, then
+          // append the rest of the cluster after it one at a time.
+          const [firstTab, ...restTabs] = tabs;
+          window.ZenCustomGroups.removeTabFromGroup(firstTab);
+          window.ZenCustomGroups.addTabToGroup(firstTab, topic, targetColor);
 
-          // Create the header right before the first tab
           const newHeader = window.ZenCustomGroups.createGroupHeader(
             topic,
-            tabs[0],
+            firstTab,
             targetColor,
           );
           existingGroupElementsMap.set(topic, newHeader);
+
+          restTabs.forEach((tab) => {
+            window.ZenCustomGroups.removeTabFromGroup(tab);
+            insertAtGroupEnd(tab);
+            window.ZenCustomGroups.addTabToGroup(tab, topic, targetColor);
+          });
         }
       }
 
